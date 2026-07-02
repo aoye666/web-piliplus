@@ -44,7 +44,7 @@ export async function getVideoDetailInfo(bvid: string) {
 
 // 视频流
 export async function getVideoPlayUrl(bvid: string, cid: number, qn = 80) {
-  const params = await wbiSign({ bvid, cid, qn, fnval: 4048, fourk: 1 })
+  const params = await wbiSign({ bvid, cid, qn, fnval: 16, fourk: 1 })  // fnval:16 = FLV 单流，避免 DASH 音画分离
   return get<{ data: any }>('/x/player/wbi/playurl', params)
 }
 

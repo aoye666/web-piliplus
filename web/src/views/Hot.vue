@@ -1,97 +1,126 @@
 <template>
-  <div class="hot">
-    <van-nav-bar title="热门" fixed />
+  <div class="hot-page">
+    <div class="page-header">
+      <h1>热门</h1>
+    </div>
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-list v-model:loading="loading" :finished="finished" finished-text="没有更多了" @load="onLoad">
-        <div class="video-grid">
-          <VideoCard
-            v-for="item in videoList"
-            :key="item.bvid"
-            :cover-url="item.pic + '@320w_200h.jpg'"
-            :title="item.title"
-            :author="item.owner?.name"
-            :duration="item.duration"
-            :stat="item.stat"
-            @click="$router.push(`/video/${item.bvid}`)"
-          />
+      <div class="hot-list">
+        <div
+          v-for="(item, index) in hotList"
+          :key="item.bvid || index"
+          class="hot-item"
+          @click="$router.push(`/video/${item.bvid}`)"
+        >
+          <div class="rank-num" :class="{ top3: index < 3 }">{{ index + 1 }}</div>
+          <img :src="item.pic + '@320w_200h.jpg'" class="hot-cover" loading="lazy" />
+          <div class="hot-info">
+            <h4 class="hot-title">{{ item.title }}</h4>
+            <div class="hot-meta">
+              <span class="hot-author">{{ item.owner?.name }}</span>
+              <span class="hot-score">{{ formatCount(item.stat?.view || 0) }}播放</span>
+            </div>
+          </div>
         </div>
-      </van-list>
+      </div>
     </van-pull-refresh>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { getHot } from '@/api/video'
-import VideoCard from '@/components/VideoCard.vue'
+import { ref, onMounted } from 'vue'
+import { getHotList } from '@/api/video'
 
-const videoList = ref<any[]>([])
-const loading = ref(false)
-const finished = ref(false)
+defineOptions({ name: 'Hot' })
+
+const hotList = ref<any[]>([])
 const refreshing = ref(false)
-let page = 1
+
+onMounted(() => onLoad())
 
 async function onLoad() {
   try {
-    const res = await getHot(page)
-    if (res.data?.list) {
-      videoList.value.push(...res.data.list)
-      page++
-      if (res.data.list.length < 20) finished.value = true
-    } else {
-      finished.value = true
-    }
-  } catch {
-    finished.value = true
-  } finally {
-    loading.value = false
+    const res = await getHotList()
+    hotList.value = res.data?.list || []
+  } catch (e) {
+    console.error('热门加载失败', e)
   }
 }
 
 function onRefresh() {
-  page = 1
-  videoList.value = []
-  finished.value = false
   refreshing.value = false
+  onLoad()
+}
+
+function formatCount(n: number) {
+  if (n >= 10000) return (n / 10000).toFixed(1) + '万'
+  return String(n)
 }
 </script>
 
 <style lang="scss" scoped>
-.hot {
-  padding-top: 46px;
+.hot-page { background: var(--bg-primary); min-height: 100vh; }
+
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  h1 { font-size: 20px; font-weight: 700; }
 }
-.video-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  padding: 10px;
-}
-.video-card {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
+
+.hot-list { padding: 10px 12px; padding-bottom: 70px; }
+
+.hot-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
   cursor: pointer;
-  .cover {
-    position: relative;
-    img { width: 100%; display: block; }
-    .duration {
-      position: absolute;
-      right: 6px; bottom: 6px;
-      background: rgba(0, 0, 0, 0.7);
-      color: #fff;
-      font-size: 12px;
-      padding: 1px 4px;
-      border-radius: 3px;
-    }
-  }
-  .info {
-    padding: 8px 10px;
-    .title {
-      font-size: 14px; line-height: 1.4;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .author, .stat { font-size: 12px; color: #9499a0; margin-top: 4px; }
-    .stat span + span { margin-left: 8px; }
-  }
+  transition: transform 0.15s;
+
+  &:active { transform: scale(0.98); }
+}
+
+.rank-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 28px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  &.top3 { color: var(--bili-pink); }
+}
+
+.hot-cover {
+  width: 120px;
+  height: 75px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.hot-info { flex: 1; min-width: 0; }
+
+.hot-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.hot-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
 }
 </style>

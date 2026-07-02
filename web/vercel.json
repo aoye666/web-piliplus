@@ -4,6 +4,7 @@
   "framework": "vite",
   "installCommand": "npm install",
   "rewrites": [
+    { "source": "/api/video-proxy", "destination": "/api/video-proxy" },
     { "source": "/api/:path*", "destination": "/api/proxy?__service=bilibili&__path=:path*" },
     { "source": "/app-api/:path*", "destination": "/api/proxy?__service=app&__path=:path*" },
     { "source": "/live-api/:path*", "destination": "/api/proxy?__service=live&__path=:path*" },

@@ -1,286 +1,169 @@
 <template>
-  <div class="mine">
-    <van-nav-bar title="我的" fixed />
+  <div class="mine-page">
+    <!-- 未登录 -->
+    <div v-if="!userStore.isLoggedIn" class="login-prompt">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e3e5e7'/%3E%3Ctext x='50' y='65' text-anchor='middle' fill='%239499a0' font-size='40'%3E👤%3C/text%3E%3C/svg%3E" class="avatar-placeholder" />
+      <h3 class="prompt-title">登录后享受更多功能</h3>
+      <p class="prompt-desc">收藏、历史、动态等</p>
+      <button class="login-btn" @click="$router.push('/login')">登录 B 站账号</button>
+    </div>
 
     <!-- 已登录 -->
-    <template v-if="isLoggedIn">
-      <div class="user-card">
-        <img :src="userStore.userInfo?.face" class="avatar" />
-        <div class="user-meta">
-          <p class="uname">{{ userStore.userInfo?.uname }}</p>
-          <p class="uid">UID: {{ userStore.userInfo?.mid }}</p>
+    <div v-else>
+      <div class="user-header">
+        <img :src="userInfo?.face" class="avatar" />
+        <div class="user-info">
+          <h3 class="username">{{ userInfo?.name }}</h3>
+          <p class="uid">UID: {{ userInfo?.mid }}</p>
         </div>
-        <van-tag v-if="userStore.userInfo?.vipStatus" type="primary">大会员</van-tag>
       </div>
-
-      <!-- 用户数据 -->
-      <van-grid :column-num="4" class="stat-grid">
-        <van-grid-item :label="`${userStats.fans || 0}粉丝`" icon="friends-o" />
-        <van-grid-item :label="`${userStats.following || 0}关注`" icon="contact" />
-        <van-grid-item :label="`${userStats.dynamic || 0}动态`" icon="comment-o" />
-        <van-grid-item :label="`${coins}硬币`" icon="gold-coin-o" />
-      </van-grid>
-
-      <!-- 功能菜单 -->
-      <van-cell-group inset class="menu-group">
-        <van-cell title="历史记录" icon="clock-o" is-link @click="$router.push('/mine')" />
-        <van-cell title="稍后再看" icon="bookmark-o" is-link />
-        <van-cell title="我的收藏" icon="star-o" is-link />
-        <van-cell title="设置" icon="setting-o" is-link />
-      </van-cell-group>
-
-      <div style="padding: 16px;">
-        <van-button plain block type="default" @click="onLogout">退出登录</van-button>
+      <div class="stats-grid">
+        <div class="stat-item" v-for="s in statItems" :key="s.label">
+          <span class="stat-num">{{ s.value }}</span>
+          <span class="stat-label">{{ s.label }}</span>
+        </div>
       </div>
-    </template>
+    </div>
 
-    <!-- 未登录 -->
-    <template v-else>
-      <!-- 扫码登录 -->
-      <div class="login-section">
-        <van-tabs v-model:active="loginTab" shrink>
-          <van-tab title="扫码登录" name="qrcode">
-            <div class="qrcode-box">
-              <div class="qrcode-wrapper">
-                <img v-if="qrcodeUrl" :src="qrcodeImg" class="qrcode-img" />
-                <van-loading v-else size="40" />
-                <div v-if="qrExpired" class="qr-overlay" @click="refreshQrcode">
-                  <p>已过期</p>
-                  <p>点击刷新</p>
-                </div>
-              </div>
-              <p class="qr-tip">打开哔哩哔哩 APP 扫码登录</p>
-              <p v-if="qrStatus" class="qr-status" :class="qrStatusClass">{{ qrStatus }}</p>
-            </div>
-          </van-tab>
-
-          <van-tab title="Cookie 登录" name="cookie">
-            <div class="cookie-box">
-              <p class="tip">从浏览器 F12 开发者工具中复制 B 站 Cookie 粘贴到下方</p>
-              <van-field
-                v-model="cookieInput"
-                type="textarea"
-                rows="4"
-                placeholder="粘贴 Cookie (SESSDATA=xxx; bili_jct=xxx; ...)..."
-              />
-              <van-button
-                type="primary"
-                block
-                :disabled="!cookieInput.trim()"
-                :loading="cookieLoading"
-                @click="onCookieLogin"
-                style="margin-top: 12px"
-              >
-                登录
-              </van-button>
-            </div>
-          </van-tab>
-        </van-tabs>
+    <div class="menu-section">
+      <div class="menu-item" v-for="item in menuItems" :key="item.label">
+        <van-icon :name="item.icon" size="20" color="#61666d" />
+        <span>{{ item.label }}</span>
+        <van-icon name="arrow" size="14" color="#c0c4cc" />
       </div>
-    </template>
+    </div>
+
+    <button v-if="userStore.isLoggedIn" class="logout-btn" @click="handleLogout">退出登录</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useUserStore } from '@/stores/user'
-import { getQrcode, pollQrcode } from '@/api/login'
-import { get } from '@/api/http'
-import { showNotify } from 'vant'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user'
+import { getUserInfo } from '@/api/user'
 
+const router = useRouter()
 const userStore = useUserStore()
-const isLoggedIn = computed(() => userStore.isLoggedIn)
-const loginTab = ref('qrcode')
-const cookieInput = ref('')
-const cookieLoading = ref(false)
+const userInfo = ref<any>(null)
 
-// 用户统计
-const userStats = ref({ fans: 0, following: 0, dynamic: 0 })
-const coins = ref(0)
+const statItems = computed(() => [
+  { label: '关注', value: userInfo.value?.following || '0' },
+  { label: '粉丝', value: userInfo.value?.follower || '0' },
+  { label: '获赞', value: '0' },
+  { label: '收藏', value: '0' },
+])
 
-// 扫码登录
-const qrcodeUrl = ref('')
-const qrcodeImg = ref('')
-const qrStatus = ref('')
-const qrStatusClass = ref('')
-const qrExpired = ref(false)
-let pollTimer: ReturnType<typeof setInterval> | null = null
+const menuItems = [
+  { icon: 'clock-o', label: '历史记录' },
+  { icon: 'star-o', label: '我的收藏' },
+  { icon: 'like-o', label: '我的点赞' },
+  { icon: 'comment-o', label: '我的评论' },
+  { icon: 'settings-o', label: '设置' },
+]
 
-// 生成二维码（Web API）
-async function refreshQrcode() {
-  qrExpired.value = false
-  qrStatus.value = ''
-  try {
-    const res: any = await getQrcode()
-    if (res.data?.url) {
-      qrcodeUrl.value = res.data.url
-      // 用第三方生成二维码图片（B 站返回的是登录 URL，需要转成二维码图片）
-      qrcodeImg.value = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(res.data.url)}`
-      // 开始轮询
-      startPolling(res.data.qrcode_key)
-    }
-  } catch (e) {
-    console.error('获取二维码失败', e)
-    showNotify({ type: 'danger', message: '获取二维码失败，请重试' })
-  }
-}
-
-function startPolling(qrcodeKey: string) {
-  if (pollTimer) clearInterval(pollTimer)
-  let elapsed = 0
-
-  pollTimer = setInterval(async () => {
-    elapsed += 2000
-    // 180秒超时
-    if (elapsed >= 180000) {
-      clearInterval(pollTimer!)
-      pollTimer = null
-      qrExpired.value = true
-      qrStatus.value = ''
-      return
-    }
-
-    try {
-      const res: any = await pollQrcode(qrcodeKey)
-      const code = res.code ?? res.data?.code
-
-      if (code === 0) {
-        // 登录成功
-        clearInterval(pollTimer!)
-        pollTimer = null
-        qrStatus.value = '登录成功！'
-        qrStatusClass.value = 'status-success'
-        // 从响应中提取 cookie 并保存
-        const setCookie = res.data?.cookie || ''
-        if (setCookie) {
-          userStore.setCookie(setCookie)
-        }
-        // 获取用户信息
-        await fetchUserInfo()
-        showNotify({ type: 'success', message: '登录成功！' })
-      } else if (code === 86090) {
-        qrStatus.value = '已扫码，等待确认...'
-        qrStatusClass.value = 'status-waiting'
-      } else if (code === 86038) {
-        clearInterval(pollTimer!)
-        pollTimer = null
-        qrExpired.value = true
-        qrStatus.value = ''
-      }
-    } catch (e) {
-      // 忽略轮询错误
-    }
-  }, 2000)
-}
-
-// Cookie 登录
-async function onCookieLogin() {
-  cookieLoading.value = true
-  try {
-    userStore.setCookie(cookieInput.value.trim())
-    await fetchUserInfo()
-    if (userStore.isLoggedIn) {
-      showNotify({ type: 'success', message: '登录成功！' })
-      cookieInput.value = ''
-    } else {
-      showNotify({ type: 'danger', message: 'Cookie 无效或已过期' })
-    }
-  } catch (e) {
-    showNotify({ type: 'danger', message: '登录失败' })
-  } finally {
-    cookieLoading.value = false
-  }
-}
-
-// 获取用户信息
-async function fetchUserInfo() {
-  try {
-    const res: any = await get('/x/web-interface/nav')
-    if (res.data?.isLogin) {
-      userStore.setUser({
-        mid: res.data.mid,
-        uname: res.data.uname,
-        face: res.data.face,
-        vipType: res.data.vipType,
-        vipStatus: res.data.vipStatus,
-      })
-      coins.value = res.data.money || 0
-
-      // 获取用户统计
-      try {
-        const statRes: any = await get('/x/relation/stat', { vmid: res.data.mid })
-        if (statRes.data) {
-          userStats.value = {
-            fans: statRes.data.follower || 0,
-            following: statRes.data.following || 0,
-            dynamic: 0,
-          }
-        }
-      } catch {}
-    }
-  } catch (e) {
-    console.error('获取用户信息失败', e)
-  }
-}
-
-// 退出
-function onLogout() {
-  userStore.logout()
-  showNotify({ type: 'warning', message: '已退出登录' })
-}
-
-// 自动尝试恢复登录态
 onMounted(async () => {
-  if (userStore.cookie) {
-    await fetchUserInfo()
+  if (userStore.isLoggedIn) {
+    try {
+      const res = await getUserInfo(userStore.uid)
+      userInfo.value = res.data?.card
+    } catch (e) {
+      console.error(e)
+    }
   }
 })
 
-onBeforeUnmount(() => {
-  if (pollTimer) clearInterval(pollTimer)
-})
+function handleLogout() {
+  userStore.logout()
+  userInfo.value = null
+}
 </script>
 
 <style lang="scss" scoped>
-.mine { padding-top: 46px; min-height: 100vh; background: #f5f5f5; }
-
-.user-card {
-  display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, #00aeec 0%, #0081c6 100%);
-  color: #fff; padding: 24px 16px; margin: 0;
-  .avatar { width: 56px; height: 56px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); }
-  .user-meta { flex: 1; }
-  .uname { font-size: 18px; font-weight: 600; }
-  .uid { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+.mine-page {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding-bottom: 70px;
 }
 
-.stat-grid { margin: 12px; border-radius: 12px; overflow: hidden; }
+.login-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px 40px;
+  background: var(--bg-card);
 
-.menu-group { margin: 12px; }
-
-.login-section { margin: 16px; }
-
-.qrcode-box {
-  text-align: center; padding: 30px 0;
-  .qrcode-wrapper {
-    position: relative; display: inline-block;
-    .qrcode-img { width: 200px; height: 200px; border: 1px solid #e3e5e7; border-radius: 8px; }
-    .qr-overlay {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.6); color: #fff; border-radius: 8px; cursor: pointer;
-      p:first-child { font-size: 16px; font-weight: 600; }
-      p:last-child { font-size: 12px; margin-top: 4px; }
-    }
-  }
-  .qr-tip { font-size: 13px; color: #61666d; margin-top: 16px; }
-  .qr-status { font-size: 13px; margin-top: 8px;
-    &.status-success { color: #07c160; }
-    &.status-waiting { color: #ff976a; }
+  .avatar-placeholder { width: 72px; height: 72px; border-radius: 50%; margin-bottom: 16px; }
+  .prompt-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .prompt-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .login-btn {
+    background: var(--bili-blue);
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 12px 36px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
   }
 }
 
-.cookie-box { padding: 20px 0;
-  .tip { font-size: 12px; color: #9499a0; margin-bottom: 12px; }
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px;
+  background: linear-gradient(135deg, #00aeec, #0095d9);
+
+  .avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); }
+  .username { color: #fff; font-size: 18px; font-weight: 600; }
+  .uid { color: rgba(255,255,255,0.7); font-size: 12px; margin-top: 2px; }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--bg-card);
+  padding: 16px;
+  gap: 8px;
+  text-align: center;
+  border-bottom: 8px solid var(--bg-primary);
+
+  .stat-num { display: block; font-size: 17px; font-weight: 600; }
+  .stat-label { font-size: 11px; color: var(--text-muted); }
+}
+
+.menu-section {
+  background: var(--bg-card);
+  margin: 0 12px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+
+    &:last-child { border-bottom: none; }
+    &:active { background: var(--bg-primary); }
+    span:first-of-type { flex: 1; }
+  }
+}
+
+.logout-btn {
+  display: block;
+  margin: 20px auto;
+  background: var(--bg-card);
+  color: var(--bili-pink);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 48px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 </style>
