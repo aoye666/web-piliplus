@@ -150,3 +150,7 @@ pili_release.json
 dist
 
 test*
+# Web project
+web/node_modules/
+web/dist/
+web/lib/
