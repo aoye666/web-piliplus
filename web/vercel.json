@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/proxy?__service=bilibili&__path=:path*" },
+    { "source": "/app-api/:path*", "destination": "/api/proxy?__service=app&__path=:path*" },
+    { "source": "/live-api/:path*", "destination": "/api/proxy?__service=live&__path=:path*" },
+    { "source": "/passport/:path*", "destination": "/api/proxy?__service=passport&__path=:path*" },
+    { "source": "/comment/:path*", "destination": "/api/proxy?__service=comment&__path=:path*" },
+    { "source": "/search-suggest/:path*", "destination": "/api/proxy?__service=search&__path=:path*" }
+  ]
+}
