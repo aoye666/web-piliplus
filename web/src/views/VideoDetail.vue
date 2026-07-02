@@ -113,7 +113,7 @@ onMounted(async () => {
   // 加载评论
   if (detail.value?.aid) {
     try {
-      const replyRes = await getReplies(detail.value.aid)
+      const replyRes = await getReplyList({ oid: detail.value.aid })
       replies.value = replyRes.data?.replies || []
       totalReplies.value = replyRes.data?.page?.count || 0
     } catch (e) {

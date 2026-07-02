@@ -60,7 +60,6 @@ function createPlayer() {
             mode: 0,
             margin: [10, '25%'],
             antiOverlap: true,
-            useWorker: true,
             synchronousPlayback: false,
             filter: (danmaku: any) => danmaku.text.length <= 30,
           }),
