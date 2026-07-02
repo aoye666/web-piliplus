@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "installCommand": "npm install",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/proxy?__service=bilibili&__path=:path*" },
     { "source": "/app-api/:path*", "destination": "/api/proxy?__service=app&__path=:path*" },
