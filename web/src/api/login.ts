@@ -1,4 +1,4 @@
-import { get, post, passportHttp, appHttp } from './http'
+import { get, passportHttp, appHttp } from './http'
 
 // Web 扫码登录 - 生成二维码
 export async function getQrcode() {

@@ -1,4 +1,4 @@
-import { get, post, searchHttp } from './http'
+import { get, searchHttp } from './http'
 import { wbiSign } from '@/utils/wbi'
 
 // 搜索建议

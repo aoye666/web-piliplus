@@ -1,5 +1,4 @@
 import { get, post } from './http'
-import { wbiSign } from '@/utils/wbi'
 
 // 收藏夹列表
 export async function getFavFolderList(upMid: number) {

@@ -17,7 +17,7 @@ const emit = defineEmits<{
   ready: [art: Artplayer]
 }>()
 
-const artRef = ref<HTMLElement>()
+const artRef = ref<HTMLDivElement>()
 let art: Artplayer | null = null
 
 function createPlayer() {
@@ -52,7 +52,7 @@ function createPlayer() {
     plugins: props.danmaku?.length
       ? [
           artplayerPluginDanmuku({
-            danmaku: props.danmaku,
+            danmuku: props.danmaku.map((d: any) => ({ ...d, color: typeof d.color === 'number' ? `#${d.color.toString(16).padStart(6, '0')}` : d.color })),
             speed: 5,
             opacity: 0.7,
             fontSize: 25,

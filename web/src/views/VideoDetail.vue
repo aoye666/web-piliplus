@@ -68,8 +68,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getVideoDetail, getVideoPlayUrl, getReplies, getDanmakuList } from '@/api/video'
-import { commentHttp } from '@/api/http'
+import { getVideoDetail, getVideoPlayUrl, getDanmakuList } from '@/api/video'
+import { getReplyList } from '@/api/reply'
 import ArtPlayer from '@/components/ArtPlayer.vue'
 
 const route = useRoute()
@@ -77,7 +77,6 @@ const bvid = route.params.bvid as string
 
 const detail = ref<any>(null)
 const playUrl = ref('')
-const videoRef = ref<HTMLVideoElement>()
 const replies = ref<any[]>([])
 const totalReplies = ref(0)
 const hasLike = ref(false)

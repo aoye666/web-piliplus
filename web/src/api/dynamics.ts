@@ -1,5 +1,4 @@
 import { get, post } from './http'
-import { wbiSign } from '@/utils/wbi'
 
 // 关注动态
 export async function getFollowDynamic(params: { offset?: string; type?: string } = {}) {

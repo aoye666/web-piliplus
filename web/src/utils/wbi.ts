@@ -16,12 +16,12 @@ function encWbi(params: Record<string, any>, imgKey: string, subKey: string): Re
   const mixinKey = getMixinKey(imgKey + subKey)
   const now = Math.round(Date.now() / 1000)
   const wts = now
-  const queryParams = { ...params, wts }
+  const queryParams: Record<string, any> = { ...params, wts }
 
   // 按 key 排序
   const sorted = Object.keys(queryParams)
     .sort()
-    .map((key) => `${key}=${encodeURIComponent(queryParams[key])}`)
+    .map((key) => `${key}=${encodeURIComponent(String(queryParams[key]))}`)
     .join('&')
 
   // 计算 wbi 签名

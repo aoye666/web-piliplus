@@ -10,7 +10,7 @@
           <p class="uname">{{ userStore.userInfo?.uname }}</p>
           <p class="uid">UID: {{ userStore.userInfo?.mid }}</p>
         </div>
-        <van-tag v-if="userStore.userInfo?.vipStatus" type="primary" size="small">大会员</van-tag>
+        <van-tag v-if="userStore.userInfo?.vipStatus" type="primary">大会员</van-tag>
       </div>
 
       <!-- 用户数据 -->
@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getQrcode, pollQrcode, checkLogin } from '@/api/login'
+import { getQrcode, pollQrcode } from '@/api/login'
 import { get } from '@/api/http'
 import { showNotify } from 'vant'
 
